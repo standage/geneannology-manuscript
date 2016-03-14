@@ -25,7 +25,7 @@ We demonstrate and discuss how GeneAnnoLogy's quality control and version contro
 ### Design
 
 GeneAnnoLogy was devised to address reproducibility challenges as discussed in the **Background** section.
-The program acts as an interface to an *annotation repository* designed for portable storage of annotation data, granular annotation refinement, tracking of changes, and dissemination to the wider community.
+The program acts as an interface to an *annotation repository* designed for portable storage of annotation data, granular annotation refinement, tracking of changes, and dissemination to a wider community.
 User input consists of one or more annotation data files in GFF3 format, from which the repository is initially populated.
 Subsequent repository maintenance is mediated through various GeneAnnoLogy commands, and may include integration of annotation data from additional sources or updates to existing annotations.
 
@@ -40,7 +40,33 @@ Typically, the *status* and *diff* commands of a version control system report f
 
 ### Implementation
 
-To go here.
+The GeneAnnoLogy program is part of the AEGeAn Toolkit (https://brendelgroup.github.io/AEGeAn) and makes extensive use of the GenomeTools C library (http://genometools.org).
+It is implemented as a program to be run on the UNIX command line and is compatible with popular UNIX operating systems such as Linux and Mac OS X.
+GeneAnnoLogy's command-line interface makes use of a *subcommand* design, in which a master program (`geneannology`) is used to manage a variety of processing tasks by invoking various sub-programs.
+A detailed description of these tasks and programs is provided in the **Repository management** section.
+
+Data input consists of well-formed gene annotations in GFF3 format.
+The requirement that data be "*well-formed*" refers to the fact that gene structures can be annotated using a variety of alternative conventions.
+For example, it is common to annotate a gene's coding sequence with multiple `CDS` features, each corresponding to an exon or a portion thereof devoted to encoding a protein.
+A less common but equally valid convention is to annotate exon structure with `exon` features and the location of the coding sequence with `start_codon` and `stop_codon` features.
+GeneAnnoLogy is designed to support any such convention, provided that the explicitly declared features describe valid gene structures in sufficient detail so that implicitly declared features can be inferred.
+GeneAnnoLogy leverages several relevant modules from the AEGeAn Toolkit to provide this functionality: the *AgnInferCDSStream* and *AgnInferExonsStream* modules for inferring implicitly annotated features, and the *AgnGeneStream* module for validating input data.
+
+Operations on annotation data are implemented in a streaming fashion, with data files as the source and an annotation repository as the endpoint.
+Following design principles implemented more generally by GenomeTools and AEGeAn (cite GenomeTools paper and iLocus paper), efficient sequential processing of individual annotations is achieved by composing distinct modular *node streams*, each designed for a particular annotation processing task.
+Thus, annotations can in general be processed one by one, keeping memory requirements low.
+Some operations, however, involve merging data from multiple sources and require loading all annotation into memory at an intermediate stage in the processing pipeline.
+These do not have the same memory efficiency advantages of the truly streaming operations, but are implemented using the same node stream interface.
+
+GeneAnnoLogy leverages the *AgnLocusStream* module to organize gene annotations into *iLoci*, each corresponding to a gene or set of overlapping genes (cite iLocus paper).
+Each iLocus is written to a distinct file in the annotation repository via the *AgnRepoStream* module.
+A detailed description of repository structure is provided in a subsequent section.
+
+GeneAnnoLogy's version control mechanisms are delegated entirely to the git version control system (cite git).
+A GeneAnnoLogy repository follows precise patterns of data organization but in all other respects is a basic git repository.
+In fact, while the most common operations on the repository (such as data import, data updates, and logging a new commit) must be mediated through the `geneannology` program, other operations (such as branching, merging, pushing, pulling, and cloning) can be invoked directly by the `git` program.
+As a result, GeneAnnoLogy annotation repositories are compatible with services and tools designed to work on git repositories.
+For example, only trivial effort is required to host a GeneAnnoLogy repository on GitHub and use GitHub as a focal point for data distribution and community engagement.
 
 ### Repository structure
 
