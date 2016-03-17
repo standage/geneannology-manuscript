@@ -1,5 +1,9 @@
 # GeneAnnoLogy: quality control and provenance for provisional genome annotations
 
+## Abstract
+
+To go here.
+
 ## Background
 
 Genome sequencing and genome-scale profiling of gene expression, DNA methylation, and protein binding have become routine laboratory procedures/services due to extraordinary advances in nucleotide sequencing technology.
@@ -52,6 +56,26 @@ A less common but equally valid convention is to annotate exon structure with `e
 GeneAnnoLogy is designed to support any such convention, provided that the explicitly declared features describe valid gene structures in sufficient detail so that implicitly declared features can be inferred.
 GeneAnnoLogy leverages several relevant modules from the AEGeAn Toolkit to provide this functionality: the *AgnInferCDSStream* and *AgnInferExonsStream* modules for inferring implicitly annotated features, and the *AgnGeneStream* module for validating input data.
 
+```
+# Two alternative annotation conventions that encode identical informatino and are equally valid.
+Chr1	SNAP	gene	755208	757581	.	+	.	ID=gene1
+Chr1	SNAP	mRNA	755208	757581	.	+	.	ID=mRNA1;Parent=gene1
+Chr1	SNAP	exon	755208	755377	.	+	.	Parent=mRNA1
+Chr1	SNAP	exon	755717	756070	.	+	.	Parent=mRNA1
+Chr1	SNAP	exon	756808	757581	.	+	.	Parent=mRNA1
+Chr1	SNAP	CDS	755305	755377	.	+	0	ID=CDS1;Parent=mRNA1
+Chr1	SNAP	CDS	755717	756070	.	+	2	ID=CDS1;Parent=mRNA1
+Chr1	SNAP	CDS	756808	757136	.	+	2	ID=CDS1;Parent=mRNA1
+###
+Chr1	SNAP	gene	755208	757581	.	+	.	ID=gene1
+Chr1	SNAP	mRNA	755208	757581	.	+	.	ID=mRNA1
+Chr1	SNAP	exon	755208	755377	.	+	.	Parent=mRNA1
+Chr1	SNAP	exon	755717	756070	.	+	.	Parent=mRNA1
+Chr1	SNAP	exon	756808	757581	.	+	.	Parent=mRNA1
+Chr1	SNAP	start_codon	755305	755307	.	+	.	Parent=mRNA1
+Chr1	SNAP	stop_codon	757134	757136	.	+	.	Parent=mRNA1
+```
+
 Operations on annotation data are implemented in a streaming fashion, with data files as the source and an annotation repository as the endpoint.
 Following design principles implemented more generally by GenomeTools and AEGeAn (cite GenomeTools paper and iLocus paper), efficient sequential processing of individual annotations is achieved by composing distinct modular *node streams*, each designed for a particular annotation processing task.
 Thus, annotations can in general be processed one by one, keeping memory requirements low.
@@ -60,7 +84,7 @@ These do not have the same memory efficiency advantages of the truly streaming o
 
 GeneAnnoLogy leverages the *AgnLocusStream* module to organize gene annotations into *iLoci*, each corresponding to a gene or set of overlapping genes (cite iLocus paper).
 Each iLocus is written to a distinct file in the annotation repository via the *AgnRepoStream* module.
-A detailed description of repository structure is provided in a subsequent section.
+A detailed description of repository structure is provided in the **Repository structure** section.
 
 GeneAnnoLogy's version control mechanisms are delegated entirely to the git version control system (cite git).
 A GeneAnnoLogy repository follows precise patterns of data organization but in all other respects is a basic git repository.
@@ -70,7 +94,30 @@ For example, only trivial effort is required to host a GeneAnnoLogy repository o
 
 ### Repository structure
 
-To go here.
+```
+├── .git/
+├── NC_004353.4/
+├── NC_004354.4/
+├── NC_024512.1/
+├── NT_033777.3/
+├── NT_033778.4/
+├── NT_033779.5/
+├── NT_037436.4/
+├── gene-locus.map
+└── sequence-gene.map
+```
+
+A GeneAnnoLogy annotation repository consists of a metadata directory (`.git/`), two map files (`gene-locus.map` and `sequence-gene.map`), and a set of data directories.
+The metadata directory stores the repository's version history, and is intended only for internal use by the `git` program.
+The map files are created by GeneAnnoLogy, and maintain the relationship between genes, iLoci, and sequences, enabling efficient targeted processing of annotation data without the need for loading all data into memory or issuing many file-system-level commands.
+The map files are intended only for internal use by the `geneannology` program.
+
+The actual gene annotations are stored in data directories.
+GeneAnnoLogy maintains a dedicated data directory for each genomic sequence, such as a chromosome, scaffold, or contig.
+Within each data directory, annotations are stored in GFF3 format with a dedicated file for each iLocus.
+GFF3 files use a plain text encoding and can easily be examined by end users.
+Even minor manual edits by end users are typically acceptable, assuming that the genomic coordinates of genes are not changed (which could require recomputing iLoci, renaming of some annotation files, and rebuiling map files).
+However, changes to the annotation data will typically be mediated by the `geneannology` program, as described in the **Repository management** section.
 
 ### Repository management
 
