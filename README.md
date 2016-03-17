@@ -54,10 +54,10 @@ The requirement that data be "*well-formed*" refers to the fact that gene struct
 For example, it is common to annotate a gene's coding sequence with multiple `CDS` features, each corresponding to an exon or a portion thereof devoted to encoding a protein.
 A less common but equally valid convention is to annotate exon structure with `exon` features and the location of the coding sequence with `start_codon` and `stop_codon` features.
 GeneAnnoLogy is designed to support any such convention, provided that the explicitly declared features describe valid gene structures in sufficient detail so that implicitly declared features can be inferred.
-GeneAnnoLogy leverages several relevant modules from the AEGeAn Toolkit to provide this functionality: the *AgnInferCDSStream* and *AgnInferExonsStream* modules for inferring implicitly annotated features, and the *AgnGeneStream* module for validating input data.
+GeneAnnoLogy leverages several relevant modules from the AEGeAn Toolkit to provide this functionality: the *AgnInferCDSStream*, *AgnInferExonsStream*, and *AgnInferParentStream* modules for inferring implicitly annotated features, and the *AgnGeneStream* module for validating input data.
 
 ```
-# Two alternative annotation conventions that encode identical informatino and are equally valid.
+# Two alternative annotation conventions that encode identical information and are equally valid.
 Chr1	SNAP	gene	755208	757581	.	+	.	ID=gene1
 Chr1	SNAP	mRNA	755208	757581	.	+	.	ID=mRNA1;Parent=gene1
 Chr1	SNAP	exon	755208	755377	.	+	.	Parent=mRNA1
@@ -79,7 +79,7 @@ Chr1	SNAP	stop_codon	757134	757136	.	+	.	Parent=mRNA1
 Operations on annotation data are implemented in a streaming fashion, with data files as the source and an annotation repository as the endpoint.
 Following design principles implemented more generally by GenomeTools and AEGeAn (cite GenomeTools paper and iLocus paper), efficient sequential processing of individual annotations is achieved by composing distinct modular *node streams*, each designed for a particular annotation processing task.
 Thus, annotations can in general be processed one by one, keeping memory requirements low.
-Some operations, however, involve merging data from multiple sources and require loading all annotation into memory at an intermediate stage in the processing pipeline.
+Some operations, however, involve merging data from multiple sources and require loading all annotations into memory at an intermediate stage in the processing procedure.
 These do not have the same memory efficiency advantages of the truly streaming operations, but are implemented using the same node stream interface.
 
 GeneAnnoLogy leverages the *AgnLocusStream* module to organize gene annotations into *iLoci*, each corresponding to a gene or set of overlapping genes (cite iLocus paper).
@@ -121,7 +121,34 @@ However, changes to the annotation data will typically be mediated by the `genea
 
 ### Repository management
 
-To go here.
+GeneAnnoLogy provides several operations to facilitate management of annotation data in the repository, supporting a range of maintenance strategies.
+Initial setup of a new annotation repository involves two operations: `init` and `commit`.
+The `init` operation initializes a new annotation repository and populates it with a set of gene models provided by the user.
+The `commit` operation records the first snapshot of the repository's contents in the version history.
+The `init` command is only invoked once for each repository, while the `commit` command can be invoked frequently during the annotation lifecycle to record snapshots of subsequent updates to the repository.
+
+The `clean` operation discards the complete complement of annotations currently in place in the repository and replaces it with a new user-provided annotation set.
+This operation is intended for applying upgrades to an entire annotation set.
+
+The `union` operation integrates a set of user-provided annotations into the repository, and can be used to annotate new gene models or maintain two or more alternative sources of annotation for the same assembly side-by-side in the repository.
+In the latter case, the `source` property of each annotated feature (GFF3 column 2) is crucial in distinguishing annotations by source.
+Accordingly, the `union` command (like most `geneannology` commands) includes a `--source` option for setting or resetting the `source` property when integrating user-provided annotations into the repository.
+
+The `merge` operation also integrates a set of user-provided annotations into the repository, but rather than maintaining multiple sources of annotation side-by-side, `merge` is used to maintain a non-redundant set of annotations.
+User-provided annotations are merged using one of two strategies.
+The `complement` merge strategy integrates any user-provided annotations that do not overlap with annotations already in the repository, but discards those that do overlap.
+The `replace` merge strategy integrates all user-provided annotations, discarding any annotations already in the repository that overlap with the user-provided annotations.
+These merge operations can be applied to entire genome scale annotation sets, or they can involve small targeted additions or refinements to the annotation.
+
+The `delete` operation discards a user-specified annotation, or all annotations within a user-specified genomic region, facilitating the removal of spurious gene predictions or other artifacts of the annotation workflow.
+
+The `show` operation aggregates the repository contents into a single GFF3 file for distribution or analysis with external programs.
+This operation includes several filtering mechanisms and other options that furnish a powerful tool for data analysis.
+The annotations reported by the `show` command can be restricted to a user-specified genomic region or annotation source; they can be filtered based on their length, exon count, and other intrinsic characteristics; they can be filtered based on arbitrary user-specified numerical or categorical attributes; and any of these filters can be combined.
+By default, the `show` operation reports the contents of the most recent commit, but also includes the option of reporting annotations from previous commits.
+
+After the the initial repository setup, invoking the `commit` operation stores a permanent snapshot of any changes that have been applied to the repository since the most recent commit.
+At any time, a previous commit can be temporarily or permanently restored using git's `checkout` command.
 
 ## Results and Discussion
 
