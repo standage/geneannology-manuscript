@@ -1,9 +1,5 @@
 # GeneAnnoLogy: quality control and provenance for provisional genome annotations
 
-## Abstract
-
-To go here.
-
 ## Background
 
 Genome sequencing and genome-scale profiling of gene expression, DNA methylation, and protein binding have become routine laboratory procedures/services due to extraordinary advances in nucleotide sequencing technology.
